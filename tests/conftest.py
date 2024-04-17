@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     INSTALLED_APPS: list[str] = ["pangloss_core"]
     authjwt_secret_key: str = "SECRET"
 
+    INTERFACE_LANGUAGES: list[str] = ["en"]
+
 
 settings = Settings()
 

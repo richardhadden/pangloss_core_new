@@ -5,6 +5,7 @@ import logging
 import sys
 
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from rich import print
 
@@ -48,7 +49,10 @@ def get_application(settings: BaseSettings):
 
     for installed_app in settings.INSTALLED_APPS:
         __import__(f"{installed_app}.models")
-        __import__(f"{installed_app}.background_tasks")
+        try:
+            __import__(f"{installed_app}.background_tasks")
+        except ModuleNotFoundError:
+            pass
         __import__(installed_app)
 
     ModelManager.initialise_models(depth=3)
@@ -57,17 +61,19 @@ def get_application(settings: BaseSettings):
         title=settings.PROJECT_NAME,
         swagger_ui_parameters={"defaultModelExpandDepth": 1, "deepLinking": True},
         lifespan=lifespan,
-        extra={"something": "someother"}
     )
     _app = setup_api_routes(_app, settings)
     _app = setup_user_routes(_app, settings)
     _app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in ["*"]],
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    _app.add_middleware(GZipMiddleware, minimum_size=400)
+    
+    
 
     return _app
 

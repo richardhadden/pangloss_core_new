@@ -45,10 +45,10 @@ class BaseNode(AbstractBaseNode):
 
         result = await tx.run(query, {"uid": str(uid)})  # type: ignore
         record = await result.value()
-
+        print(record)
         if len(record) == 0:
             raise PanglossNotFoundError(f'<{cls.__name__} uid="{uid}"> not found')
-
+        print(record[0])
         return cls.View(**record[0])
 
     @write_transaction
@@ -140,7 +140,7 @@ class BaseNode(AbstractBaseNode):
         if q:
             terms = q.split(" ")
 
-            search_string = " AND ".join(f"/.*{re.escape(term)}.*/" for term in terms)
+            search_string = " AND ".join(f"/{re.escape(term)}.*/" for term in terms)
 
             query = f"""            
                 CALL {{

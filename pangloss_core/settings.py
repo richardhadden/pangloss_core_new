@@ -20,6 +20,8 @@ class BaseSettings(PydanticBaseSettings):
 
     authjwt_secret_key: str
 
+    INTERFACE_LANGUAGES: list[str]
+
     @field_validator("BACKEND_CORS_ORIGINS")
     def assemble_cors_origins(
         cls, v: typing.Union[str, list[str]]

@@ -217,7 +217,7 @@ async def get_current_admin_user(
 
 def setup_user_routes(_app: FastAPI, settings):
 
-    api_router = APIRouter(prefix="/users", tags=["User"])
+    api_router = APIRouter(prefix="/api/users", tags=["User"])
 
     @api_router.post("/login", response_model=Token, name="UserLogin")
     async def login_for_access_token(
@@ -234,13 +234,20 @@ def setup_user_routes(_app: FastAPI, settings):
             data={"sub": user.username}, expires_delta=access_token_expires
         )
         response.set_cookie(
-            key="access_token", value=f"Bearer {access_token}", httponly=False
+            key="access_token", value=f"Bearer {access_token}", httponly=True
         )  # set HttpOnly cookie in response
-        return {"access_token": access_token, "token_type": "bearer"}
+        response.set_cookie(
+            key="logged_in_user_name", value=user.username, httponly=False
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+        }
 
     @api_router.get("/logout", name="UserLogout")
     async def log_out(response: Response) -> dict[str, str]:
-        response.delete_cookie("access_token")
+        response.delete_cookie(key="access_token", httponly=True)
+        response.delete_cookie("logged_in_user_name", httponly=False, samesite="lax")
         return {"message": "Logged out"}
 
     @api_router.get("/current_user", name="CurrentUser")

@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings
 from pangloss_core.model_setup.model_manager import ModelManager
 from pangloss_core.exceptions import PanglossNotFoundError
 from pangloss_core.users import User, get_current_active_user
+from pangloss_core.model_setup.build_model_hierarchy import recursive_get_subclasses
 
 
 class ErrorResponse(BaseModel):
@@ -19,8 +20,10 @@ class ListResponse[T](typing.TypedDict):
     page: int
     count: int
     totalPages: int
-    next: str | None
-    previous: str | None
+    nextPage: int | None
+    previousPage: int | None
+    nextUrl: str | None
+    previousUrl: str | None
 
 
 def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
@@ -31,17 +34,26 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
 
         def _list(model):
 
+            model_subclasses = recursive_get_subclasses(model)
+            allowed_types = (
+                typing.Union[*(m.Reference for m in model_subclasses)]  # type: ignore
+                if model_subclasses
+                else model.Reference
+            )
+
             async def list(
                 request: Request,
                 current_user: typing.Annotated[User, Depends(get_current_active_user)],
                 q: typing.Optional[str] = "",
                 page: int = 1,
-                pageSize: int = 25,
-            ) -> ListResponse[model.Reference]:
+                pageSize: int = 50,
+            ) -> ListResponse[allowed_types]:  # type: ignore
 
                 result = await model.get_list(q=q, page=page, page_size=pageSize)
-
-                result["next"] = (
+                result["nextPage"] = (
+                    page + 1 if page + 1 <= result["totalPages"] else None
+                )
+                result["nextUrl"] = (
                     str(
                         request.url.replace_query_params(
                             q=q, page=page + 1, pageSize=pageSize
@@ -50,7 +62,8 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
                     if page + 1 <= result["totalPages"]
                     else None
                 )
-                result["previous"] = (
+                result["previousPage"] = page - 1 if page - 1 >= 1 else None
+                result["previousUrl"] = (
                     str(
                         request.url.replace_query_params(
                             q=q, page=page - 1, pageSize=pageSize
@@ -68,8 +81,9 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
             "/",
             endpoint=_list(model),
             methods={"get"},
-            name=f"{model.__name__}.List",
-            operation_id=f"{model.__name__}List",
+            name=f"{model.__name__}list",
+            operation_id=f"{model.__name__}list",
+            openapi_extra={"requiresAuth": True},
         )
 
         if not model.__abstract__:

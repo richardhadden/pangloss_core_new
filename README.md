@@ -299,8 +299,26 @@ Relations typically require the "object" of the relation to already be in the da
 
 Setting the `RelationConfig` `create_inline`/`edit_inline` allows new objects to be related to be sent along as well, and will be connected/created/updated as appropriate. `detach_delete` will also delete the node if it is no longer referenced by its parent (as if it's embedded — see above. The difference with this is that the inline-created nodes *can* be viewed as standalone nodes, and are treated like this for incoming relations.)
 
+### User management
+
+There are now users!
+
+Run:
+
+```bash
+pangloss users create
+```
+
+to add a new user (make this user an admin, then this user can also add users via the API).
+
+At the moment — because I'm working on it — the List endpoints require validation; the rest don't.
+
 
 ## Notes
+
+### Deleting
+
+Is currently not possible. Some interesting discussion to be had on whether things delete, or are just marked as "deleted" — and how far this extends down the chain of dependent nodes.
 
 ### Code standards
 Hacky, horrible, and needs thorough revision. All the models are well-tested though. Just run `pytest`.
@@ -331,9 +349,9 @@ There is no intention for this to function as an ORM. `BaseNode` models provide 
 
 It's neo4j. So no. If you want to change something, write some Cypher. Maybe it'll be possible to introspect the models, find changes, and then generate the Cypher to do this — but as nothing really works at the moment, that is another matter.
 
-### User management
+### Zotero
 
-Todo. At the moment, no security at all. No log-in. Do not deploy anywhere.
+There is a plugin for managing Zotero entities from a shared library (it ingests them all, and makes them connectable as nodes): [https://github.com/richardhadden/pangloss-zotero]
 
 ### Interface
 To do. Big fan of `solid.js` though.

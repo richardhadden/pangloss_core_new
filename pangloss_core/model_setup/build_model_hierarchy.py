@@ -17,7 +17,7 @@ def recursive_get_subclasses(model: type["BaseNode"]):
 
     subclasses = []
     for subclass in model.__subclasses__():
-        subclasses.append(subclass.__name__)
+        subclasses.append(subclass)
         subclasses += recursive_get_subclasses(subclass)
 
     return subclasses
@@ -28,3 +28,9 @@ def build_model_subclass_lists():
     for model in ModelManager._registered_models:
         subclass_lists[model.__name__] = recursive_get_subclasses(model)
     return subclass_lists
+
+
+def build_top_level_classes_list():
+    from pangloss_core.models import BaseNode
+
+    return [subclass.__name__ for subclass in BaseNode.__subclasses__()]

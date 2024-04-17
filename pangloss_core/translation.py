@@ -44,8 +44,10 @@ def create_model_translation_dict(
             translation["__model"][lang]["description"] = model.__doc__ or ""
         else:
             translation["__model"][lang]["verbose_name"] = "VerboseNameInGerman"
-            translation["__model"][lang]["verbose_name_plural"] = "german1"
-            translation["__model"][lang]["descriptio"] = ""
+            translation["__model"][lang][
+                "verbose_name_plural"
+            ] = "SomeVerbosePluralNameInGerman"
+            translation["__model"][lang]["description"] = ""
 
     return translation
 

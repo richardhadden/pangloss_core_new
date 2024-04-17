@@ -11,23 +11,27 @@ from pydantic import BaseModel
 if typing.TYPE_CHECKING:
     from pangloss_core.models import BaseNode
 
-class Index(BaseModel):
+class IndexAnnotation():
+    def __hash__(self):
+        return 0
+
+class Index(IndexAnnotation):
     pass
 
 
-class Unique(BaseModel):
+class Unique(IndexAnnotation):
     pass
 
 
-class TextIndex(BaseModel):
+class TextIndex(IndexAnnotation):
     pass
 
 
-class FullTextIndex(BaseModel):
+class FullTextIndex(IndexAnnotation):
     pass
 
 
-class OmitFromNodeFullTextIndex:
+class OmitFromNodeFullTextIndex(IndexAnnotation):
     pass
 
 
