@@ -38,13 +38,20 @@ class ViewNodeBase(SubNodeProxy):
     def get(cls, uid: uuid.UUID) -> typing.Awaitable[typing.Self | None]:
         return cls.base_class.get_view(uid)  # type: ignore
 
-    @pydantic.field_validator("created_when", mode="before")
+    """ @pydantic.field_validator("created_when", mode="before")
     def transform_created_when(cls, raw: neo4j.time.DateTime) -> datetime.datetime:
         return raw.to_native()
 
     @pydantic.field_validator("modified_when", mode="before")
     def transform_modified_when(cls, raw: neo4j.time.DateTime) -> datetime.datetime:
-        return raw.to_native()
+        return raw.to_native() """
+
+    @pydantic.field_validator("*", mode="before")
+    @classmethod
+    def convert_neo4j_dates(cls, value: typing.Any, field) -> typing.Any:
+        if isinstance(value, (neo4j.time.Date, neo4j.time.DateTime)):
+            return value.to_native()
+        return value
 
 
 class EditNodeBase(SubNodeProxy):
@@ -112,6 +119,13 @@ class AbstractBaseNode(BaseNodeStandardFields):
     modified_when: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )"""
+
+    @pydantic.field_validator("*", mode="before")
+    @classmethod
+    def convert_neo4j_dates(cls, value: typing.Any, field) -> typing.Any:
+        if isinstance(value, (neo4j.time.Date, neo4j.time.DateTime)):
+            return value.to_native()
+        return value
 
     def __init_subclass__(cls):
         cls.__setup_run_init_subclass_checks__()

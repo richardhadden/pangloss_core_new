@@ -91,9 +91,6 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
             def _get(model):
                 async def get(
                     uid: uuid.UUID,
-                    current_user: typing.Annotated[
-                        User, Depends(get_current_active_user)
-                    ],
                 ) -> model.View:  # type: ignore
 
                     try:
@@ -114,7 +111,12 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
             if model.__create__:
 
                 def _create(model):
-                    async def create(entity: model) -> model.Reference:  # type: ignore
+                    async def create(
+                        entity: model,
+                        current_user: typing.Annotated[
+                            User, Depends(get_current_active_user)
+                        ],
+                    ) -> model.Reference:  # type: ignore
                         result = await entity.create()
                         return result
 

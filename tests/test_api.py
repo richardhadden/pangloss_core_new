@@ -13,7 +13,7 @@ from pangloss_core.application import get_application
 from pangloss_core.database import Database
 from pangloss_core.users import create_user, UserInDB
 
-from .test_application.models import ZoteroEntry
+from .test_application.models import ZoteroEntry, Factoid
 
 import httpx
 
@@ -136,18 +136,20 @@ async def test_zotero_entry_written(zotero_entry: ZoteroEntry):
     assert z.uid == zotero_entry.uid
 
 
+""" # Changed viewing to be possible without login by default
+# Need to implement some kind of permissions model and then test this
+# properly
 @pytest.mark.asyncio
 async def test_api_get_zotero_entry_when_unauthorised_is_wrong(
     client: httpx.AsyncClient, zotero_entry
 ):
-
     response = await client.get(
         f"/api/ZoteroEntry/{ZOTERO_ENTRY_UID}", follow_redirects=True
     )
     assert response.status_code == 401
     data = response.json()
 
-    assert data == {"detail": "Not authenticated"}
+    assert data == {"detail": "Not authenticated"} """
 
 
 @pytest.mark.asyncio
@@ -180,3 +182,125 @@ async def test_list_item_with_api(client: httpx.AsyncClient, zotero_entry: Zoter
     assert uuid.UUID(item["uid"]) == zotero_entry.uid
     assert item["realType"] == "ZoteroEntry"
     assert item["label"] == "A Test Zotero Entry"
+
+
+@pytest.mark.asyncio
+async def test_create_person_when_not_logged_in_raises_401(client: httpx.AsyncClient):
+    response = await client.post(
+        "/api/Person/new",
+        data={
+            "label": "Toby Jones",
+            "realType": "Person",
+        },
+    )
+    assert response.status_code == 401
+
+
+@pytest_asyncio.fixture
+async def person_created_response(logged_in_client: httpx.AsyncClient):
+    response = await logged_in_client.post(
+        "/api/Person/new",
+        json={
+            "label": "Toby Jones",
+            "realType": "Person",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    yield data
+    await Database.dangerously_clear_database()
+
+
+@pytest.mark.asyncio
+async def test_person_fixture(person_created_response):
+    data = person_created_response
+    assert uuid.UUID(data["uid"])
+    assert data["realType"] == "Person"
+    assert data["label"] == "Toby Jones"
+
+
+@pytest.mark.asyncio
+async def test_create_person_when_logged_in_works(logged_in_client: httpx.AsyncClient):
+    response = await logged_in_client.post(
+        "/api/Person/new",
+        json={
+            "label": "Toby Jones",
+            "realType": "Person",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert uuid.UUID(data["uid"])
+    assert data["realType"] == "Person"
+    assert data["label"] == "Toby Jones"
+
+
+@pytest.mark.asyncio
+async def test_get_created_person(
+    logged_in_client: httpx.AsyncClient, person_created_response
+):
+    response = await logged_in_client.get(
+        f"/api/Person/{person_created_response['uid']}"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["carriedOutActivity"] is None
+    assert data["hasBirthEvent"] is None
+    assert data["hasDeathEvent"] is None
+    assert data["isSubjectOfStatement"] is None
+    assert data["label"] == "Toby Jones"
+    assert data["realType"] == "Person"
+    assert data["uid"] == person_created_response["uid"]
+
+
+@pytest.mark.asyncio
+async def test_create_factoid(
+    logged_in_client: httpx.AsyncClient,
+    person_created_response,
+    zotero_entry: ZoteroEntry,
+):
+    response = await logged_in_client.post(
+        "/api/Factoid/new",
+        json={
+            "label": "Toby Jones is born",
+            "realType": "Factoid",
+            "citation": [
+                {
+                    "realType": "Citation",
+                    "reference": [
+                        {
+                            "uid": str(zotero_entry.uid),
+                            "label": zotero_entry.label,
+                            "realType": "ZoteroEntry",
+                        }
+                    ],
+                    "scope": "Page 94",
+                }
+            ],
+            "statements": [
+                {
+                    "label": "Birth of Toby Jones",
+                    "realType": "Birth",
+                    "personBorn": [
+                        {
+                            "uid": person_created_response["uid"],
+                            "label": person_created_response["label"],
+                            "realType": "Person",
+                        }
+                    ],
+                    "when": "1998-01-01",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert uuid.UUID(data["uid"])
+    assert data["label"] == "Toby Jones is born"
+
+    # Now check it's in the database!
+
+    f = await Factoid.View.get(uid=data["uid"])
+    assert f
