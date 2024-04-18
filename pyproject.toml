@@ -29,6 +29,7 @@ patchdiff = "^0.3.4"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5"
+pytest-sugar = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -36,3 +37,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 pangloss = 'pangloss_core.cli.main:cli'
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "./tests/",
+]
+filterwarnings = "ignore::DeprecationWarning"

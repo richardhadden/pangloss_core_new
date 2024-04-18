@@ -43,7 +43,7 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
 
             async def list(
                 request: Request,
-                current_user: typing.Annotated[User, Depends(get_current_active_user)],
+                # current_user: typing.Annotated[User, Depends(get_current_active_user)], # Don't lock down list view
                 q: typing.Optional[str] = "",
                 page: int = 1,
                 pageSize: int = 50,
@@ -89,7 +89,12 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
         if not model.__abstract__:
 
             def _get(model):
-                async def get(uid: uuid.UUID) -> model.View:  # type: ignore
+                async def get(
+                    uid: uuid.UUID,
+                    current_user: typing.Annotated[
+                        User, Depends(get_current_active_user)
+                    ],
+                ) -> model.View:  # type: ignore
 
                     try:
                         result = await model.View.get(uid=uid)

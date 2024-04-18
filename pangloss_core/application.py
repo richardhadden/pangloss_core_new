@@ -1,5 +1,4 @@
 import asyncio
-import atexit
 import contextlib
 import logging
 import sys
@@ -7,7 +6,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from rich import print
+
 
 from pangloss_core.settings import BaseSettings
 from pangloss_core.users import setup_user_routes
@@ -30,7 +29,7 @@ def get_application(settings: BaseSettings):
         for task in BackgroundTaskRegistry:
             if not DEVELOPMENT_MODE or task["run_in_dev"]:
             
-                running_task = asyncio.create_task(task["function"]())
+                running_task = asyncio.create_task(task["function"]()) # type: ignore
              
                 RunningBackgroundTasks.append(running_task)
             else:

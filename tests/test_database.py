@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated, Optional
+import typing
 
 import pytest
 import pytest_asyncio
@@ -99,6 +100,7 @@ async def test_clear_database_fixture(clear_database):
     assert result.data()["new_person"]["uid"] == str(FAKE_UID)
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_model_save(clear_database):
     class Thing(BaseNode):
@@ -113,6 +115,7 @@ async def test_model_save(clear_database):
     assert result.uid == thing.uid
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_model_with_relations(clear_database):
     class Pet(BaseNode):
@@ -153,6 +156,7 @@ async def test_model_with_relations(clear_database):
     assert result.pets[0].real_type == "Cat"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_model_with_relation_data():
     class PersonPetRelation(RelationPropertiesModel):
@@ -207,6 +211,7 @@ async def test_model_with_relation_data():
     assert pet.relation_properties.purchased_when == "February"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_create_with_multiple_relations():
     class Pet(BaseNode):
@@ -259,6 +264,7 @@ async def test_create_with_multiple_relations():
     assert pet1.real_type == "Cat"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_create_with_embedded_node():
     class DateBase(BaseNode):
@@ -290,6 +296,7 @@ async def test_create_with_embedded_node():
     assert date_of_birth.date_precise == "Last February"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_create_with_double_embedded_node(clear_database):
     class DoubleInner(BaseNode):
@@ -341,6 +348,7 @@ async def test_create_with_double_embedded_node(clear_database):
     assert double_inner.name == "DoubleInnerName"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_create_with_double_embedded_node_with_relation(clear_database):
     # await Database.dangerously_clear_database()
@@ -449,6 +457,7 @@ async def test_create_with_double_embedded_node_with_relation(clear_database):
     assert double_inner_has_pet.label == "DoubleInnerPet"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_write_abstract_reification():
     class IdentificationIdentifiedEntityRelation(RelationPropertiesModel):
@@ -512,6 +521,7 @@ async def test_write_abstract_reification():
     event_from_db = await Event.get_view(uid=event.uid)
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_write_trait(clear_database):
     class Purchaseable(BaseNonHeritableMixin):
@@ -549,6 +559,7 @@ async def test_write_trait(clear_database):
     assert purchased_item.real_type == "Pet"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_read_view():
     # Create some data... (TODO: make this into a function somewhere maybe?)
@@ -608,6 +619,7 @@ async def test_read_view():
     assert is_location_of.uid == person.uid
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_reverse_relations_through_embedded(clear_database):
     await Database.dangerously_clear_database()
@@ -701,6 +713,7 @@ async def test_reverse_relations_through_embedded(clear_database):
     assert tortoise_result.tortoise_has_owner[0].uid == person.uid
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_get_reverse_relation_through_reified(clear_database):
     class Pet(BaseNode):
@@ -742,6 +755,7 @@ async def test_get_reverse_relation_through_reified(clear_database):
     assert pet_read.is_pet_of[0].uid == person.uid
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_reverse_relations_do_not_propagate_indefinitely(clear_database):
     class Toy(BaseNode):
@@ -776,6 +790,7 @@ async def test_reverse_relations_do_not_propagate_indefinitely(clear_database):
     assert toy_read.toy_belongs_to[0].uid == pet.uid
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_create_relation_inline(clear_database):
     class Person(BaseNode):
@@ -823,6 +838,7 @@ async def test_create_relation_inline(clear_database):
     assert order_read.thing_ordered[0].label == "Making Soup"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_non_match_returns_error(clear_database):
     class Person(BaseNode):
@@ -834,6 +850,7 @@ async def test_non_match_returns_error(clear_database):
         await Person.get_view(uid=uuid.uuid4())
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_uid_uniqueness_constraint_violation_raises_error(clear_database):
     class Person(BaseNode):
@@ -850,6 +867,7 @@ async def test_uid_uniqueness_constraint_violation_raises_error(clear_database):
         await person2.create()
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_view_get_method(clear_database):
     class Person(BaseNode):
@@ -863,6 +881,7 @@ async def test_view_get_method(clear_database):
     person_view = await Person.View.get(uid=person.uid)
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_edit_relation_inline(clear_database):
     class Person(BaseNode):
@@ -918,6 +937,7 @@ async def test_edit_relation_inline(clear_database):
     order_update_view = await Order.Edit.get(uid=order.uid)
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_properties(clear_database):
     class Person(BaseNode):
@@ -952,6 +972,7 @@ async def test_update_properties(clear_database):
     assert person_updated.age == 101
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_basic_relations():
     class Pet(BaseNode):
@@ -1045,6 +1066,7 @@ async def test_update_basic_relations():
     }
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_inline_editable_relation(clear_database):
     class Pet(BaseNode):
@@ -1144,6 +1166,7 @@ async def test_update_inline_editable_relation(clear_database):
     # TODO: delete dependents!
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_double_embedded_objects():
     await Database.dangerously_clear_database()
@@ -1431,6 +1454,7 @@ async def test_update_double_embedded_objects():
         await Order.View.get(uid=order_to_edit2.thing_ordered[0].uid)
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_nested_embedded():
     class Pet(BaseNode):
@@ -1526,6 +1550,7 @@ async def test_update_nested_embedded():
     assert john_smith_updated.outer[0].real_type == "OuterTypeTwo"
 
 
+@typing.no_type_check
 @pytest.mark.asyncio
 async def test_update_raises_error_and_does_nothing_if_uid_not_found():
     class Pet(BaseNode):

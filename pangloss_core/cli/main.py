@@ -16,6 +16,7 @@ import typer
 from pangloss_core.initialisation import get_project_settings, get_app_clis, import_project_file_of_name
 from pangloss_core.model_setup.model_manager import ModelManager
 from pangloss_core.users import user_cli
+from pangloss_core.types_generation import type_generation_cli
 from pangloss_core.indexes import install_indexes_and_constraints
 from pangloss_core.database import initialise_database_driver
 from pangloss_core.translation import build_or_patch_translation_file
@@ -29,6 +30,7 @@ cli_app = typer.Typer(
 )
 
 cli_app.add_typer(user_cli, name="users")
+cli_app.add_typer(type_generation_cli, name="types")
 
 @cli_app.command()
 def registercli(project: typing.Annotated[Path, typer.Option(exists=True, help="The path of the project to run")]):
@@ -157,17 +159,18 @@ def cli():
    
     if "--project" in sys.argv:
         project_path = sys.argv[sys.argv.index("--project") + 1]
-        settings = get_project_settings(project_path)
-        initialise_database_driver(settings)
-        for app in settings.INSTALLED_APPS:
-            __import__(f"{app}.models")
-            try:
-                m = __import__(f"{app}.cli")
-                c = m.cli.__dict__.get("cli")
-                if c:
-                    cli_app.add_typer(c, name=c.info.name)
-            except ModuleNotFoundError:
-                pass
+        if project_path:
+            settings = get_project_settings(project_path)
+            initialise_database_driver(settings)
+            for app in settings.INSTALLED_APPS:
+                __import__(f"{app}.models")
+                try:
+                    m = __import__(f"{app}.cli")
+                    c = m.cli.__dict__.get("cli")
+                    if c:
+                        cli_app.add_typer(c, name=c.info.name)
+                except ModuleNotFoundError:
+                    pass
             
-    ModelManager.initialise_models(depth=3)
+            ModelManager.initialise_models(depth=3)
     return cli_app()

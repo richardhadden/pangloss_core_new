@@ -1,8 +1,9 @@
 import pytest
 import asyncio
 
-from pangloss_core.database import initialise_database_driver
+
 from pangloss_core.settings import BaseSettings
+from pangloss_core.database import initialise_database_driver
 
 from pydantic import AnyHttpUrl
 
@@ -24,15 +25,17 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+
 initialise_database_driver(settings)
 
 
 @pytest.fixture(scope="session")
 def event_loop(request):
-    """Create an instance of the default event loop for each test case."""
-    from pangloss_core.database import close_database_connection
+
+    from pangloss_core.database import close_database_connection, Database
 
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
-    close_database_connection()
+    loop.run_until_complete(Database.dangerously_clear_database())
+    loop.run_until_complete(close_database_connection())
     loop.close()

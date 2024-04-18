@@ -134,7 +134,8 @@ class UserInDB(User):
         result = await tx.run(query, params)
         user = await result.value()
         try:
-            return __class__(**user[0])
+            if user and user[0]:
+                return __class__(**user[0])
         except IndexError:
             return None
 
