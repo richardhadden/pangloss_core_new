@@ -55,7 +55,7 @@ def get_string_fields(model: type["BaseNode"]) -> list[str]:
     return string_fields
 
 
-def install_indexes_and_constraints():
+def create_index_queries():
     queries = [
         "CREATE CONSTRAINT BaseNodeUidUnique IF NOT EXISTS FOR (n:BaseNode) REQUIRE n.uid IS UNIQUE",
     ]
@@ -80,11 +80,19 @@ def install_indexes_and_constraints():
             ]
         )
         print(f"Creating Full Text Index for [green bold]{model.__name__}[/green bold] on fields {", ".join(f"[blue bold]{f}[/blue bold]" for f in string_fields)}")
+    return queries
+
+def install_indexes_and_constraints():
+    queries = create_index_queries()
 
     async def _run(queries):
 
         async def _run_query(query):
-            await Database.cypher_write(query, {})
+            try:
+                await Database.cypher_write(query, {})
+            except Exception as e:
+                print(e)
+                
 
         await asyncio.gather(*[_run_query(query) for query in queries])
 

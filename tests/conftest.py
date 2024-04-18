@@ -27,7 +27,6 @@ settings = Settings()
 
 
 initialise_database_driver(settings)
-install_indexes_and_constraints()
 
 
 @pytest.fixture(scope="session")

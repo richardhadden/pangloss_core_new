@@ -1,10 +1,10 @@
 import pytest
 import pytest_asyncio
 
+import asyncio
 import typing
 import uuid
 
-from fastapi.testclient import TestClient
 from pydantic import AnyHttpUrl
 
 from pangloss_core.model_setup.model_manager import ModelManager
@@ -12,6 +12,7 @@ from pangloss_core.settings import BaseSettings
 from pangloss_core.application import get_application
 from pangloss_core.database import Database
 from pangloss_core.users import create_user, UserInDB
+
 
 from .test_application.models import ZoteroEntry, Factoid
 
@@ -35,8 +36,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 application = get_application(settings)
-
-# client = TestClient(application)
 
 
 @pytest_asyncio.fixture()
@@ -307,3 +306,15 @@ async def test_create_factoid(
     # Now get it from the API
     response = await logged_in_client.get(f"/api/Factoid/{f.uid}")
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_list_query(logged_in_client: httpx.AsyncClient, zotero_entry):
+    await asyncio.sleep(1)  # Stick a delay here so the index has a change to refresh
+    # Can probably get away with less than a second (~0.08 seems ok) but
+    # a second won't hurt
+    response = await logged_in_client.get("/api/ZoteroEntry/?q=entry")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert uuid.UUID(data["results"][0]["uid"]) == zotero_entry.uid
