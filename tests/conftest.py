@@ -4,7 +4,7 @@ import asyncio
 
 from pangloss_core.settings import BaseSettings
 from pangloss_core.database import initialise_database_driver
-
+from pangloss_core.indexes import install_indexes_and_constraints
 from pydantic import AnyHttpUrl
 
 
@@ -27,6 +27,7 @@ settings = Settings()
 
 
 initialise_database_driver(settings)
+install_indexes_and_constraints()
 
 
 @pytest.fixture(scope="session")
