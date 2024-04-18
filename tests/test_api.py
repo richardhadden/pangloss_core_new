@@ -301,6 +301,9 @@ async def test_create_factoid(
     assert data["label"] == "Toby Jones is born"
 
     # Now check it's in the database!
-
     f = await Factoid.View.get(uid=data["uid"])
-    assert f
+    assert f.uid == uuid.UUID(data["uid"])
+
+    # Now get it from the API
+    response = await logged_in_client.get(f"/api/Factoid/{f.uid}")
+    assert response.status_code == 200
