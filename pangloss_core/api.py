@@ -34,6 +34,8 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
 
         def _list(model):
 
+            # Lists should also show any subclass of the model type,
+            # so we need to allow this by getting all subclasses
             model_subclasses = recursive_get_subclasses(model)
             allowed_types = (
                 typing.Union[*(m.Reference for m in model_subclasses)]  # type: ignore

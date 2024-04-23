@@ -75,6 +75,9 @@ class Identification[T](ReifiedRelation[T]):
 
 class Statement(BaseNode):
     __abstract__ = True
+    __create__ = False
+    __edit__ = False
+    __delete__ = False
 
     subject_of_statement: Annotated[
         RelationTo[Person],
