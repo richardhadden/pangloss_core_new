@@ -119,7 +119,7 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
                             User, Depends(get_current_active_user)
                         ],
                     ) -> model.Reference:  # type: ignore
-                        result = await entity.create()
+                        result = await entity.create(username=current_user.username)
                         return result
 
                     return create
@@ -156,7 +156,11 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
 
                 def _post_edit(model):
                     async def post_edit(
-                        uid: uuid.UUID, entity: model.Edit
+                        uid: uuid.UUID,
+                        entity: model.Edit,
+                        current_user: typing.Annotated[
+                            User, Depends(get_current_active_user)
+                        ],
                     ) -> model.Reference:
 
                         # Should not be using the endpoint to send different update objects!
@@ -164,7 +168,9 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
                             raise HTTPException(status_code=400, detail="Bad request")
 
                         try:
-                            result = await entity.write_edit()
+                            result = await entity.write_edit(
+                                username=current_user.username
+                            )
                         except PanglossNotFoundError:
                             raise HTTPException(
                                 status_code=404, detail="Item not found"

@@ -3,6 +3,8 @@ import typing
 import uuid
 
 import neo4j.exceptions
+import pydantic
+
 from pangloss_core.model_setup.base_node_definitions import EditNodeBase
 
 from pangloss_core.model_setup.base_node_definitions import (
@@ -52,13 +54,16 @@ class BaseNode(AbstractBaseNode):
         return cls.View(**record[0])
 
     @write_transaction
-    async def create(self, tx: Transaction) -> BaseNodeReference:
+    async def create(
+        self, tx: Transaction, username: str = "Auto"
+    ) -> BaseNodeReference:
+        # print(user.username)
         (
             node_identifier,
             MATCH_CLAUSES,
             CREATE_CLAUSES,
             params_dict,
-        ) = cypher.build_write_query_and_params_dict(self)
+        ) = cypher.build_write_query_and_params_dict(self, username=username)
 
         query = f"""
         {"""
@@ -115,8 +120,10 @@ class BaseNode(AbstractBaseNode):
 
     @staticmethod
     @write_transaction
-    async def _write_edit(item: EditNodeBase, tx: Transaction) -> None:
-        query, params = cypher.update_query(item)
+    async def _write_edit(
+        item: EditNodeBase, tx: Transaction, username: str = "Auto"
+    ) -> None:
+        query, params = cypher.update_query(item, username=username)
         with open("update_query.cypher", "w") as f:
             f.write(query)
             f.write("\n\n\n\n")

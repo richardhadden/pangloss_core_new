@@ -53,6 +53,7 @@ def convert_type_for_writing(value):
 
 def unpack_properties_to_create_props_and_param_dict(
     node: AbstractBaseNode,
+    username: str,
     skip_fields: list[str] = [],
     omit_braces: bool=False
 ) -> tuple[str, dict[str, Any]]:
@@ -69,6 +70,7 @@ def unpack_properties_to_create_props_and_param_dict(
                 if isinstance(node, EmbeddedNodeBase) and prop_name == "label":
                     pass
                 else:
+                    print(prop_name)
                     raise AttributeError(e)
 
     real_type_id = get_unique_string()
@@ -81,10 +83,13 @@ def unpack_properties_to_create_props_and_param_dict(
     else:
         params[real_type_id] = node.__class__.__name__
   
+    params["username"] = username
         
     q_pairs.append(f"""real_type: ${real_type_id}""")
     q_pairs.append("""created_when: datetime()""")
     q_pairs.append("""modified_when: datetime()""")
+    q_pairs.append("""created_by: $username""")
+    q_pairs.append("""modified_by: $username""")
     if omit_braces:
         return ", ".join(q_pairs), params
     return "{" + ", ".join(q_pairs) + "}", params
@@ -101,13 +106,13 @@ def unpack_dict_to_cypher_map_and_params(d):
 
 
 def build_write_query_and_params_dict_for_single_node(
-    node: AbstractBaseNode,
+    node: AbstractBaseNode, username: str
 ) -> tuple[str, str, dict[str, Any]]:
     labels = labels_to_query_labels(node)
     (
         node_props,
         params_dict,
-    ) = unpack_properties_to_create_props_and_param_dict(node)
+    ) = unpack_properties_to_create_props_and_param_dict(node, username=username)
 
     node_identifier = get_unique_string()
 
@@ -149,13 +154,13 @@ def build_write_query_for_related_node(
 
 
 def build_write_query_and_params_dict(
-    node: AbstractBaseNode, extra_labels: list[str] | None = None
+    node: AbstractBaseNode, username: str, extra_labels: list[str] | None = None, 
 ) -> tuple[str, list[str], list[str], dict[str, Any]]:
-    labels = labels_to_query_labels(node)
+    
     (
         node_props,
         params_dict,
-    ) = unpack_properties_to_create_props_and_param_dict(node)
+    ) = unpack_properties_to_create_props_and_param_dict(node, username=username)
 
     node_identifier = get_unique_string()
 
@@ -172,7 +177,7 @@ def build_write_query_and_params_dict(
                 embedded_query_create_clauses,
                 embedded_params_dict,
             ) = build_write_query_and_params_dict(
-                embedded_node, extra_labels=["Embedded", "DeleteDetach"]
+                embedded_node, extra_labels=["Embedded", "DeleteDetach"], username=username
             )
             CREATE_CLAUSES += [
                 *embedded_query_create_clauses,
@@ -193,7 +198,7 @@ def build_write_query_and_params_dict(
                     reified_query_match_clauses,
                     reified_query_create_clauses,
                     reified_params_dict,
-                ) = build_write_query_and_params_dict(related_reification)
+                ) = build_write_query_and_params_dict(related_reification, username=username)
 
                 relation_dict = {
                     "reverse_name": relation.relation_config.reverse_name,
@@ -229,7 +234,7 @@ def build_write_query_and_params_dict(
                     query_create_clauses,
                     query_params_dict,
                 ) = build_write_query_and_params_dict(
-                    related_item, extra_labels=extra_labels
+                    related_item, extra_labels=extra_labels, username=username
                 )
 
                 CREATE_CLAUSES += [
@@ -392,6 +397,7 @@ def build_update_inline_query_and_params(
     node: EditNodeBase,
     relation_name,
     start_node_identifier,
+    username:str,
     delete_node_on_detach=False,
     accumulated_withs=None,
 ):
@@ -428,6 +434,7 @@ def build_update_inline_query_and_params(
         ) = build_node_update_query_and_params(
             related_node,
             related_node_identifier,
+            username=username,
             accumulated_withs=set([*accumulated_withs, related_node_identifier]),
         )
         accumulated_withs.add(related_node_identifier)
@@ -494,7 +501,9 @@ def build_update_inline_query_and_params(
 def build_update_embedded_query_and_params(
     node: EmbeddedNodeBase | EditNodeBase,
     embedded_relation_name,
+    
     start_node_identifier,
+    username: str,
     accumulated_withs=None,
 ):
     print("Building embedded update query for", node.__class__.__name__)
@@ -532,6 +541,7 @@ def build_update_embedded_query_and_params(
             embedded_node,
             embedded_node_identifier,
             accumulated_withs=set([*accumulated_withs, embedded_node_identifier]),
+            username=username
         )
         accumulated_withs.add(embedded_node_identifier)
 
@@ -581,7 +591,7 @@ def build_update_embedded_query_and_params(
 
 
 def build_node_update_query_and_params(
-    node: EditNodeBase, node_identifier: str, accumulated_withs=None
+    node: EditNodeBase, node_identifier: str, username: str, accumulated_withs=None
 ) -> tuple[str, str, dict[str, Any]]:
     if not accumulated_withs:
         accumulated_withs = set([node_identifier])
@@ -589,8 +599,9 @@ def build_node_update_query_and_params(
     properties_dict = build_properties_update_dict(node)
     properties_dict_param = get_unique_string()
     params: dict[str, Any] = {properties_dict_param: properties_dict}
+    params["username"] = username
     update_set_query = f"""
-    SET {node_identifier} = apoc.map.merge(${properties_dict_param}, {{created_when: coalesce({node_identifier}.created_when, datetime()), modified_when: datetime()}}) // {properties_dict}
+    SET {node_identifier} = apoc.map.merge(${properties_dict_param}, {{created_when: coalesce({node_identifier}.created_when, datetime()), modified_when: datetime(), modified_by: $username}}) // {properties_dict}
     """
     update_relations_query = ""
     for embedded_name, embedded_definition in node.base_class.embedded_nodes.items():
@@ -599,7 +610,7 @@ def build_node_update_query_and_params(
             embedded_update_set_query,
             embedded_params,
         ) = build_update_embedded_query_and_params(
-            node, embedded_name, node_identifier, accumulated_withs=accumulated_withs
+            node, embedded_name, node_identifier, username=username, accumulated_withs=accumulated_withs, 
         )
         update_relations_query += embedded_update_related_query
         update_set_query += embedded_update_set_query
@@ -620,8 +631,11 @@ def build_node_update_query_and_params(
             ) = build_update_inline_query_and_params(
                 node,
                 relation_name,
+                
                 node_identifier,
-                relation.relation_config.delete_related_on_detach,
+                username=username,
+                delete_node_on_detach=relation.relation_config.delete_related_on_detach,
+                
                 accumulated_withs=accumulated_withs,
             )
             update_relations_query += relation_update_related_query
@@ -631,7 +645,7 @@ def build_node_update_query_and_params(
     return update_relations_query, update_set_query, params
 
 
-def update_query(node: EditNodeBase) -> tuple[str, dict[str, Any]]:
+def update_query(node: EditNodeBase, username:str) -> tuple[str, dict[str, Any]]:
     node_identifier = get_unique_string()
     node_uid_param = get_unique_string()
 
@@ -642,7 +656,7 @@ def update_query(node: EditNodeBase) -> tuple[str, dict[str, Any]]:
         update_relations_query,
         update_set_query,
         node_update_params,
-    ) = build_node_update_query_and_params(node, node_identifier)
+    ) = build_node_update_query_and_params(node, node_identifier, username=username)
     query += update_relations_query
 
     query += update_set_query

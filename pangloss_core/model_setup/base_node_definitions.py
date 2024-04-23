@@ -33,6 +33,8 @@ class EmbeddedNodeBase(SubNodeProxy):
 class ViewNodeBase(SubNodeProxy):
     created_when: datetime.datetime
     modified_when: datetime.datetime
+    created_by: str = pydantic.Field(default="Auto")
+    modified_by: str = pydantic.Field(default="Auto")
 
     @classmethod
     def get(cls, uid: uuid.UUID) -> typing.Awaitable[typing.Self | None]:
