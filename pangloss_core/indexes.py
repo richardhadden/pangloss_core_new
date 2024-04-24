@@ -58,6 +58,14 @@ def get_string_fields(model: type["BaseNode"]) -> list[str]:
 def create_index_queries():
     queries = [
         "CREATE CONSTRAINT BaseNodeUidUnique IF NOT EXISTS FOR (n:BaseNode) REQUIRE n.uid IS UNIQUE",
+        """CREATE FULLTEXT INDEX BaseNodeFullTextIndex 
+                IF NOT EXISTS FOR (n:BaseNode) ON EACH [n.label]
+                OPTIONS {
+                    indexConfig: {
+                        `fulltext.analyzer`: 'standard-no-stop-words',
+                        `fulltext.eventually_consistent`: true
+                    }
+                }"""
     ]
     print("Creating Constraint: [green bold]BaseNode[/green bold].[blue bold]uid[/blue bold] must be unique")
     
