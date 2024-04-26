@@ -10,6 +10,8 @@ from pangloss_core.exceptions import PanglossNotFoundError
 from pangloss_core.users import User, get_current_active_user
 from pangloss_core.model_setup.build_model_hierarchy import recursive_get_subclasses
 
+import asyncio
+
 
 class ErrorResponse(BaseModel):
     detail: str
@@ -50,7 +52,7 @@ def setup_api_routes(_app: FastAPI, settings: BaseSettings) -> FastAPI:
                 page: int = 1,
                 pageSize: int = 50,
             ) -> ListResponse[allowed_types]:  # type: ignore
-
+                # await asyncio.sleep(5)
                 result = await model.get_list(q=q, page=page, page_size=pageSize)
                 result["nextPage"] = (
                     page + 1 if page + 1 <= result["totalPages"] else None

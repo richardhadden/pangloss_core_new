@@ -13,13 +13,14 @@ from rich.panel import Panel
 
 import typer
 
-from pangloss_core.initialisation import get_project_settings, get_app_clis, import_project_file_of_name
+
 from pangloss_core.model_setup.model_manager import ModelManager
 from pangloss_core.users import user_cli
 from pangloss_core.types_generation import type_generation_cli
+from pangloss_core.translation import translation_cli
 from pangloss_core.indexes import install_indexes_and_constraints
 from pangloss_core.database import initialise_database_driver
-from pangloss_core.translation import build_or_patch_translation_file
+from pangloss_core.initialisation import get_project_settings
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates")
 
@@ -31,6 +32,7 @@ cli_app = typer.Typer(
 
 cli_app.add_typer(user_cli, name="users")
 cli_app.add_typer(type_generation_cli, name="types")
+cli_app.add_typer(translation_cli, name="translation")
 
 @cli_app.command()
 def registercli(project: typing.Annotated[Path, typer.Option(exists=True, help="The path of the project to run")]):
@@ -147,10 +149,8 @@ def run(project: Project):
 def setup_database(project: Project):
     install_indexes_and_constraints()
     
-@cli_app.command()
-def create_translation_file(project: Project):
-    settings = get_project_settings(str(project))
-    build_or_patch_translation_file(project, settings)
+
+    
 
 def cli():
     """Initialises the Typer-based CLI by checking installed app folders

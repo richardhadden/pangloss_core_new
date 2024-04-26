@@ -1240,6 +1240,19 @@ files = [
 ]
 
 [[package]]
+name = "titlecase"
+version = "2.4.1"
+description = "Python Port of John Gruber's titlecase.pl"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "titlecase-2.4.1.tar.gz", hash = "sha256:7d83a277ccbbda11a2944e78a63e5ccaf3d32f828c594312e4862f9a07f635f5"},
+]
+
+[package.extras]
+regex = ["regex (>=2020.4.4)"]
+
+[[package]]
 name = "typer"
 version = "0.9.4"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
@@ -1401,4 +1414,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "a0534129c992d7b2b7654441d3df5dd73b5832b5ca0373195b2b154c41fadc9b"
+content-hash = "26ce576d7fc200646db15cc33c5bc65997be48cc861affa882278d18db2ce5c8"

@@ -24,6 +24,7 @@ passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 bcrypt = "^4.1.2"
 pluralizer = "^1.2.0"
 patchdiff = "^0.3.4"
+titlecase = "^2.4.1"
 
 
 [tool.poetry.group.dev.dependencies]
