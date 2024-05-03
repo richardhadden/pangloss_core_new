@@ -14,7 +14,7 @@ from pangloss_core.database import Database
 from pangloss_core.users import create_user, UserInDB
 
 
-from .test_application.models import ZoteroEntry, Factoid
+from .test_application.models import ZoteroEntry, Factoid, Person
 
 import httpx
 
@@ -238,6 +238,7 @@ async def test_create_person_when_logged_in_works(logged_in_client: httpx.AsyncC
 async def test_get_created_person(
     logged_in_client: httpx.AsyncClient, person_created_response
 ):
+
     response = await logged_in_client.get(
         f"/api/Person/{person_created_response['uid']}"
     )

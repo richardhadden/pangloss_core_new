@@ -3,8 +3,10 @@ import typing
 from pangloss_core.model_setup.setup_utils import (
     _get_all_subclasses,
     _get_concrete_node_classes,
+    _get_parent_class,
 )
 from pangloss_core.models import BaseNode
+from pangloss_core.model_setup.model_manager import ModelManager
 
 
 def test_get_all_subclasses():
@@ -81,3 +83,18 @@ def test_get_concrete_node_classes_with_abstract():
         DatePrecise,
         DateImprecise,
     }
+
+
+def test_get_parent_class():
+    class Thing(BaseNode):
+        pass
+
+    class Animal(Thing):
+        pass
+
+    class Person(Animal):
+        pass
+
+    ModelManager.initialise_models(depth=3)
+
+    assert _get_parent_class(Person) == Animal
