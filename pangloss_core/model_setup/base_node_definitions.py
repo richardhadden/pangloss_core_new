@@ -17,6 +17,7 @@ from pangloss_core.model_setup.config_definitions import (
 from pangloss_core.model_setup.models_base import BaseNodeStandardFields
 from pangloss_core.model_setup.subnode_proxy import SubNodeProxy
 from pangloss_core.model_setup.reference_node_base import BaseNodeReference
+from pangloss_core.model_setup.config_definitions import ModelFieldsDefinitions
 
 
 class ReferenceDict(typing.TypedDict):
@@ -71,7 +72,7 @@ class EditNodeBase(SubNodeProxy):
         return self.base_class._write_edit(self)  # type: ignore
 
 
-class BaseNonHeritableMixin:
+class BaseNonHeritableTrait:
     __pg_real_types_with_trait__: set[type["AbstractBaseNode"]]
 
     @classmethod
@@ -91,12 +92,14 @@ class BaseNonHeritableMixin:
         cls.__pg_real_types_with_trait__ = set()
 
 
-class BaseMixin:
+class BaseHeritableTrait:
     pass
 
 
 class AbstractBaseNode(BaseNodeStandardFields):
     __abstract__ = True
+
+    field_definitions: typing.ClassVar[ModelFieldsDefinitions]
 
     View: typing.ClassVar[type["ViewNodeBase"]]
     Embedded: typing.ClassVar[type["EmbeddedNodeBase"]]
@@ -158,21 +161,21 @@ class AbstractBaseNode(BaseNodeStandardFields):
 
     @classmethod
     def __pg_add_type_to_trait_list_of_real_types__(cls):
-        if issubclass(cls, BaseNonHeritableMixin):
+        if issubclass(cls, BaseNonHeritableTrait):
             for trait in cls.__pg_get_non_heritable_mixins_as_direct_ancestors__():
                 trait.__pg_real_types_with_trait__.add(cls)
 
     @classmethod
     def __pg_get_non_heritable_mixins_as_direct_ancestors__(
         cls,
-    ) -> set[BaseNonHeritableMixin]:
+    ) -> set[BaseNonHeritableTrait]:
         """Identifies Traits that are directly applied to a model class"""
         traits_as_direct_bases = []
         for base in cls.__bases__:
             for parent in inspect.getmro(base):
                 if parent is AbstractBaseNode:
                     break
-                elif parent is BaseNonHeritableMixin:
+                elif parent is BaseNonHeritableTrait:
                     traits_as_direct_bases.append(base)
                 else:
                     continue
@@ -181,16 +184,16 @@ class AbstractBaseNode(BaseNodeStandardFields):
     @classmethod
     def __pg_get_non_heritable_mixins_as_indirect_ancestors__(
         cls,
-    ) -> set[BaseNonHeritableMixin]:
+    ) -> set[BaseNonHeritableTrait]:
         traits_as_indirect_ancestors = []
         traits_as_direct_ancestors = (
             cls.__pg_get_non_heritable_mixins_as_direct_ancestors__()
         )
         for c in cls.mro():
             if (
-                issubclass(c, BaseNonHeritableMixin)
+                issubclass(c, BaseNonHeritableTrait)
                 and not issubclass(c, AbstractBaseNode)
-                and c is not BaseNonHeritableMixin
+                and c is not BaseNonHeritableTrait
                 and c is not cls
                 and c not in traits_as_direct_ancestors
             ):

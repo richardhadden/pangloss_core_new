@@ -1,9 +1,14 @@
 import typing
 
+from pangloss_core.model_setup.config_definitions import RelationConfig
+from pangloss_core.model_setup.relation_to import ReifiedRelation
+from pangloss_core.model_setup.setup_procedures import (
+    _get_parent_class,
+)
 from pangloss_core.model_setup.setup_utils import (
     _get_all_subclasses,
     _get_concrete_node_classes,
-    _get_parent_class,
+    is_relation_field,
 )
 from pangloss_core.models import BaseNode
 from pangloss_core.model_setup.model_manager import ModelManager
@@ -98,3 +103,25 @@ def test_get_parent_class():
     ModelManager.initialise_models(depth=3)
 
     assert _get_parent_class(Person) == Animal
+
+
+def test_is_relation_field():
+    class Thing(BaseNode):
+        pass
+
+    class OtherThing(BaseNode):
+        pass
+
+    class ThingViaReified[T](ReifiedRelation[T]):
+        pass
+
+    class Person(BaseNode):
+        owns_thing: typing.Annotated[Thing, RelationConfig(reverse_name="is_owned_by")]
+        owns_thing_via_reified: typing.Annotated[
+            ThingViaReified[Thing], RelationConfig(reverse_name="is_own_by")
+        ]
+
+        # owns_union: Thing | OtherThing
+
+    assert is_relation_field(Person.model_fields["owns_thing"].annotation)
+    assert is_relation_field(Person.model_fields["owns_thing_via_reified"].annotation)

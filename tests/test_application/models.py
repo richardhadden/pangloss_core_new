@@ -14,7 +14,7 @@ from pangloss_core.models import (
     RelationPropertiesModel,
 )
 
-from annotated_types import MinLen, MaxLen
+from annotated_types import MinLen, MaxLen, Gt, Le
 
 
 class ZoteroEntry(BaseNode):
@@ -33,12 +33,6 @@ class Person(Entity):
 
 class Organisation(Entity):
     pass
-
-
-class Source(BaseNode):
-    """A source of something"""
-
-    title: str
 
 
 class Citation(BaseNode):
@@ -69,8 +63,22 @@ class Factoid(BaseNode):
     ]
 
 
+class Certainty(RelationPropertiesModel):
+    certainty: Annotated[int, Gt(0), Le(0)]
+
+
 class Identification[T](ReifiedRelation[T]):
-    pass
+    target: Annotated[
+        RelationTo[T],
+        RelationConfig(reverse_name="is_identified_in", relation_model=Certainty),
+    ]
+
+
+class RepresentationIdentification(Identification[Person]):
+    represented_by: Annotated[
+        Identification[Person],
+        RelationConfig("acts_as_representative_in"),
+    ]
 
 
 class Statement(BaseNode):
@@ -80,7 +88,7 @@ class Statement(BaseNode):
     __delete__ = False
 
     subject_of_statement: Annotated[
-        RelationTo[Person],
+        Identification[Person] | RepresentationIdentification,
         RelationConfig(reverse_name="is_subject_of_statement"),
     ]
 
@@ -91,13 +99,21 @@ class TemporalStatement(Statement):
 
 
 class Naming(Statement):
+    person_named: Annotated[
+        Identification[Person],
+        RelationConfig(
+            reverse_name="is_named_in",
+            subclasses_relation="subject_of_statement",
+            validators=[MinLen(1), MaxLen(1)],
+        ),
+    ]
     first_name: str
     last_name: str
 
 
 class Birth(TemporalStatement):
     person_born: Annotated[
-        RelationTo[Person],
+        Identification[Person],
         RelationConfig(
             reverse_name="has_birth_event",
             subclasses_relation="subject_of_statement",
@@ -106,18 +122,13 @@ class Birth(TemporalStatement):
     ]
 
 
-class NatureOfDeath(RelationPropertiesModel):
-    type: str
-
-
 class Death(TemporalStatement):
-    person_born: Annotated[
-        RelationTo[Person],
+    person_died: Annotated[
+        Identification[Person],
         RelationConfig(
             reverse_name="has_death_event",
             subclasses_relation="subject_of_statement",
             validators=[MinLen(1), MaxLen(1)],
-            relation_model=NatureOfDeath,
         ),
     ]
 
@@ -126,7 +137,7 @@ class Activity(TemporalStatement):
     __abstract__ = True
 
     carried_out_by: Annotated[
-        RelationTo[Person | Organisation],
+        Identification[Person | Organisation] | RepresentationIdentification,
         RelationConfig(reverse_name="carried_out_activity", validators=[MaxLen(1)]),
     ]
 
@@ -136,6 +147,13 @@ class MakeJam(Activity):
 
 
 class Order(TemporalStatement):
+    order_given_by: Annotated[
+        Identification[Person | Organisation],
+        RelationConfig(
+            reverse_name="gave_order",
+            subclasses_relation="subject_of_statement",
+        ),
+    ]
     thing_ordered: Annotated[
         RelationTo[Order | MakeJam],
         RelationConfig("was_ordered_in", create_inline=True),

@@ -23,7 +23,7 @@ from pangloss_core.model_setup.relation_properties_model import (
 )
 from pangloss_core.model_setup.embedded import Embedded
 from pangloss_core.models import BaseNode
-from pangloss_core.model_setup.base_node_definitions import BaseNonHeritableMixin
+from pangloss_core.model_setup.base_node_definitions import BaseNonHeritableTrait
 from pangloss_core.model_setup.relation_to import (
     RelationTo,
     RelationConfig,
@@ -524,7 +524,7 @@ async def test_write_abstract_reification():
 @typing.no_type_check
 @pytest.mark.asyncio
 async def test_write_trait(clear_database):
-    class Purchaseable(BaseNonHeritableMixin):
+    class Purchaseable(BaseNonHeritableTrait):
         price: int
 
     class Pet(BaseNode, Purchaseable):

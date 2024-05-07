@@ -9,13 +9,15 @@ import pytest
 from pangloss_core.exceptions import PanglossConfigError
 
 from pangloss_core.model_setup.base_node_definitions import (
-    BaseNonHeritableMixin,
+    BaseNonHeritableTrait,
+    BaseHeritableTrait,
     EditNodeBase,
     ViewNodeBase,
 )
 from pangloss_core.model_setup.config_definitions import (
     EmbeddedConfig,
     RelationConfig,
+    RelationDefinition,
 )
 from pangloss_core.model_setup.reference_node_base import BaseNodeReference
 from pangloss_core.model_setup.relation_properties_model import (
@@ -34,12 +36,14 @@ from pangloss_core.model_setup.relation_to import (
 )
 from pangloss_core.models import BaseNode
 
-from pangloss_core.model_setup.setup_utils import (
+from pangloss_core.model_setup.setup_procedures import (
     __setup_find_cyclic_outgoing_references_for_edit__,
-    _get_concrete_node_classes,
+    setup_build_model_definition,
 )
 
-from pangloss_core.model_setup.inheritance import Inheritance
+from pangloss_core.model_setup.setup_utils import _get_concrete_node_classes
+
+from pangloss_core.model_setup.config_definitions import EmbeddedNodeDefinition
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -118,7 +122,7 @@ def test_abstract_declaration_not_inherited():
 def test_non_heritable_mixins_are_inherited_directly():
     """Test NonHeritableMixins are inherited by direct child"""
 
-    class Purchaseable(BaseNonHeritableMixin):
+    class Purchaseable(BaseNonHeritableTrait):
         price: int
 
     class Animal(BaseNode):
@@ -141,7 +145,7 @@ def test_non_heritable_mixins_are_inherited_directly():
 def test_non_heritable_mixins_are_not_inherited_indirectly():
     """Test NonHeritableMixins are not inherited by grandchild classes"""
 
-    class Purchaseable(BaseNonHeritableMixin):
+    class Purchaseable(BaseNonHeritableTrait):
         price: int
 
     class Animal(BaseNode):
@@ -172,13 +176,13 @@ def test_non_heritable_mixins_are_not_inherited_indirectly():
 
 
 def test_traits_keep_track_of_their_real_classes():
-    class Purchaseable(BaseNonHeritableMixin):
+    class Purchaseable(BaseNonHeritableTrait):
         price: int
 
     class CheaplyPurchaseable(Purchaseable):
         pass
 
-    class Punchable(BaseNonHeritableMixin):
+    class Punchable(BaseNonHeritableTrait):
         pass
 
     class Thing(BaseNode):
@@ -522,7 +526,7 @@ def test_reference_model_on_relation():
 
 
 def test_relation_to_trait():
-    class Purchaseable(BaseNonHeritableMixin):
+    class Purchaseable(BaseNonHeritableTrait):
         price: int
 
     class Thing(BaseNode):
@@ -788,7 +792,7 @@ def test_incoming_relations_through_embedded():
 
 
 def test_incoming_relations_through_embedded_rel_to_trait():
-    class Citable(BaseNonHeritableMixin):
+    class Citable(BaseNonHeritableTrait):
         pass
 
     class WrittenSource(BaseNode, Citable):
@@ -1784,3 +1788,103 @@ def test_build_model_subclass_lists():
 
     assert build_model_subclass_lists() == {}
 """
+
+
+def test_create_model_config():
+    """Step one in re-writing setup code. Differences:
+
+    RelationTo no longer required;"""
+
+    class Edible(BaseHeritableTrait):
+        pass
+
+    class Inedible(BaseNonHeritableTrait):
+        pass
+
+    class Entity(BaseNode):
+        __abstract__ = True
+
+    class Person(Entity, Inedible):
+        pass
+
+    class SpecialPerson(Person):
+        pass
+
+    class Plant(Entity, Inedible):
+        pass
+
+    class Carrot(Plant, Edible):
+        pass
+
+    class PurpleCarrot(Carrot):
+        pass
+
+    class Certainty(RelationPropertiesModel):
+        certainty: typing.Annotated[int, annotated_types.Gt(0), annotated_types.Le(0)]
+
+    class Identification[T](ReifiedRelation[T]):
+        target: typing.Annotated[
+            RelationTo[T],
+            RelationConfig(reverse_name="is_identified_in", relation_model=Certainty),
+        ]
+
+    class RepresentationIdentification(Identification[Person]):
+        represented_by: typing.Annotated[
+            Identification[Person],
+            RelationConfig("acts_as_representative_in"),
+        ]
+
+    class Citation(BaseNode):
+        pass
+
+    class HarvardCitation(Citation):
+        pass
+
+    class Statement(BaseNode):
+        number_field: int
+        annotated_number_field: typing.Annotated[int, annotated_types.Ge(1)]
+
+        citation: Embedded[Citation]
+
+        subject_of_statement: typing.Annotated[
+            Identification[Person] | RepresentationIdentification,
+            RelationConfig(reverse_name="is_subject_of_statement"),
+        ]
+
+        rel_to_person_simple: typing.Annotated[
+            Person,
+            RelationConfig(reverse_name="is_person_in_simple"),
+        ]
+
+        combo_annotated: (
+            typing.Annotated[Carrot, RelationConfig(reverse_name="is_carrot_of")]
+            | typing.Annotated[Person, RelationConfig(reverse_name="is_person_of")]
+        )
+
+    ModelManager.initialise_models(depth=3)  # No need to init
+
+    citation_definition = Statement.field_definitions["citation"]
+    assert citation_definition
+    assert isinstance(citation_definition, EmbeddedNodeDefinition)
+    assert citation_definition.annotation_class == (Citation,)
+    assert citation_definition.concrete_embedded_classes == {Citation, HarvardCitation}
+
+    rel_to_person_simple_definition = Statement.field_definitions[
+        "rel_to_person_simple"
+    ]
+    assert rel_to_person_simple_definition
+    assert isinstance(rel_to_person_simple_definition, RelationDefinition)
+    assert rel_to_person_simple_definition.annotation_class == (Person)
+    assert rel_to_person_simple_definition.target_base_classes == {
+        Person,
+        SpecialPerson,
+    }
+    assert rel_to_person_simple_definition.reverse_name == "is_person_in_simple"
+
+
+def test_embedded_cannot_take_non_node_type():
+    class Statement(BaseNode):
+        wrong_embedded: Embedded[int]
+
+    with pytest.raises(PanglossConfigError):
+        setup_build_model_definition(Statement)

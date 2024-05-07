@@ -4,7 +4,7 @@ import typing
 import pydantic
 
 from pangloss_core.exceptions import PanglossConfigError
-from pangloss_core.model_setup.setup_utils import (
+from pangloss_core.model_setup.setup_procedures import (
     __pg_create_embedded_class__,
     __setup_delete_indirect_non_heritable_mixin_fields__,
     __setup_update_embedded_definitions__,
@@ -16,6 +16,7 @@ from pangloss_core.model_setup.setup_utils import (
     __setup_construct_view_type__,
     __setup_construct_edit_type__,
     __setup_create_reference_class__,
+    setup_build_model_definition,
 )
 
 if typing.TYPE_CHECKING:
@@ -49,7 +50,10 @@ class ModelManager:
                 default=subclass.__name__,
             )
 
-            __setup_delete_indirect_non_heritable_mixin_fields__(subclass)
+            subclass.model_rebuild(force=True, _parent_namespace_depth=depth)
+            subclass.field_definitions = setup_build_model_definition(subclass)
+
+            """ __setup_delete_indirect_non_heritable_mixin_fields__(subclass)
             subclass.model_rebuild(force=True, _parent_namespace_depth=depth)
 
             subclass.outgoing_relations = {}
@@ -62,9 +66,9 @@ class ModelManager:
             subclass.Embedded = __pg_create_embedded_class__(subclass)
 
             subclass.incoming_relations = defaultdict(set)
-            subclass.model_rebuild(force=True, _parent_namespace_depth=depth)
+            subclass.model_rebuild(force=True, _parent_namespace_depth=depth) """
 
-        for subclass in cls._registered_models:
+        """ for subclass in cls._registered_models:
             __setup_add_incoming_relations_to_related_models__(subclass)
             __setup_add_all_property_fields__(subclass)
 
@@ -80,4 +84,4 @@ class ModelManager:
             for k, v in subclass.Edit.model_fields.items():
                 v = v.rebuild_annotation()
 
-            subclass.Edit.model_rebuild(force=True, _parent_namespace_depth=depth)
+            subclass.Edit.model_rebuild(force=True, _parent_namespace_depth=depth) """
