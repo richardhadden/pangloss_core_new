@@ -9,9 +9,6 @@ import pydantic_core
 from pangloss_core.model_setup.models_base import CamelModel
 
 
-from pangloss_core.model_setup.config_definitions import RelationConfig
-
-
 class RelationTo[T](typing.Sequence[T]):
     wrapper_type = "RelationTo"
 
@@ -53,19 +50,3 @@ class ReifiedRelation[T](CamelModel):
 
     # def __str__(self):
     #    return f"<ReifiedRelation::{self.__class__.__name__} target={self.target.__str__()}"
-
-
-class ReifiedTargetConfig(RelationConfig):
-    """Provides configuration for relation between a `ReifiedRelation` and the target `BaseNode` type, e.g.:
-
-    ```
-    class Person:
-        pets: RelationTo[
-            Pet,
-            ReifiedRelationConfig(validators=[MaxLen(2)]),
-            TargetRelationConfig(reverse_name="owned_by"),
-        ]
-    ```
-    """
-
-    pass

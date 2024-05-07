@@ -5,7 +5,10 @@ import typing
 
 import annotated_types
 
-from pangloss_core.model_setup.setup_utils import _get_concrete_node_classes
+from pangloss_core.model_setup.setup_utils import (
+    _get_concrete_node_classes,
+    get_subclasses_of_reified_relations,
+)
 from pangloss_core.exceptions import PanglossConfigError
 
 
@@ -49,6 +52,22 @@ class RelationConfig:
             + repr(self.edit_inline)
             + repr(self.delete_related_on_detach)
         )
+
+
+class ReifiedTargetConfig(RelationConfig):
+    """Provides configuration for relation between a `ReifiedRelation` and the target `BaseNode` type, e.g.:
+
+    ```
+    class Person:
+        pets: RelationTo[
+            Pet,
+            ReifiedRelationConfig(validators=[MaxLen(2)]),
+            TargetRelationConfig(reverse_name="owned_by"),
+        ]
+    ```
+    """
+
+    pass
 
 
 @dataclasses.dataclass
@@ -199,7 +218,7 @@ class RelationDefinition(FieldDefinition):
             type["BaseNonHeritableTrait"],
         ]
     ]
-    target_base_classes: set[type["AbstractBaseNode"]]
+    target_base_classes: set[type["AbstractBaseNode"] | type["ReifiedRelation"]]
     target_real_classes: set[type["AbstractBaseNode"] | type["ReifiedRelation"]]
     origin_base_class: type["AbstractBaseNode"]
     relation_properties_model: typing.Optional[type["RelationPropertiesModel"]] = None
@@ -215,14 +234,42 @@ class RelationDefinition(FieldDefinition):
 
     @staticmethod
     def get_target_base_classes(annotation):
-        return _get_concrete_node_classes(annotation, include_subclasses=True)
+        from pangloss_core.model_setup.base_node_definitions import (
+            AbstractBaseNode,
+            BaseHeritableTrait,
+            BaseNonHeritableTrait,
+        )
+        from pangloss_core.model_setup.relation_to import ReifiedRelation
+
+        target_base_classes = []
+        if unpacked_classes := typing.get_args(annotation):
+            for unpacked_class in unpacked_classes:
+                target_base_classes = [
+                    *target_base_classes,
+                    *RelationDefinition.get_target_base_classes(unpacked_class),
+                ]
+        if inspect.isclass(annotation) and issubclass(
+            annotation, (AbstractBaseNode, BaseHeritableTrait, BaseNonHeritableTrait)
+        ):
+            target_base_classes = [
+                *target_base_classes,
+                *_get_concrete_node_classes(annotation, include_subclasses=True),
+            ]
+        if inspect.isclass(annotation) and issubclass(annotation, ReifiedRelation):
+            target_base_classes = [
+                *target_base_classes,
+                *get_subclasses_of_reified_relations(annotation),
+            ]
+        return set(target_base_classes)
 
     def __init__(
         self, annotation, metadata, model: type["AbstractBaseNode"], field_name: str
     ):
+        from pangloss_core.model_setup.config_definitions import RelationConfig
 
         self.annotation_class = annotation
         self.target_base_classes = self.get_target_base_classes(annotation=annotation)
+        # TODO: self.target_real_classes = self.get_target_base_classes(annotation=annotation)
         self.origin_base_class = model
 
         if not metadata:

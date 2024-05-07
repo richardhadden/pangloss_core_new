@@ -32,6 +32,7 @@ from pangloss_core.model_setup.config_definitions import (
     _OutgoingReifiedRelationDefinition,
     RelationConfig,
     RelationDefinition,
+    ReifiedTargetConfig,
 )
 from pangloss_core.model_setup.reference_node_base import BaseNodeReference
 from pangloss_core.model_setup.relation_properties_model import (
@@ -39,10 +40,10 @@ from pangloss_core.model_setup.relation_properties_model import (
 )
 from pangloss_core.model_setup.relation_to import (
     ReifiedRelation,
-    ReifiedTargetConfig,
 )
 from pangloss_core.model_setup.inheritance import Inheritance
 from pangloss_core.model_setup.embedded import Embedded
+from pangloss_core.model_setup.setup_utils import is_relation_field
 
 
 def __pg_create_embedded_class__(cls: type[AbstractBaseNode]) -> type[EmbeddedNodeBase]:
@@ -935,26 +936,25 @@ def create_field_config(annotation, metadata, model, field_name: str):
         return PropertyFieldDefinition(typing_inspect.get_args(annotation)[0])
 
     elif typing.get_origin(annotation) is typing.Annotated:
-        print("is annotated", field_name)
-
-    # TODO: replace with a function ... is_relation_type() or something
-    elif inspect.isclass(annotation) and issubclass(
-        annotation, (AbstractBaseNode, ReifiedRelation)
-    ):
+        # print("is annotated", field_name)
+        pass
+    elif is_relation_field(model, field_name, annotation):
         return RelationDefinition(
             annotation=annotation, metadata=metadata, model=model, field_name=field_name
         )
 
     elif typing_inspect.get_origin(annotation) is Embedded:
         return EmbeddedNodeDefinition(
-            annotation_class=typing_inspect.get_args(annotation),
+            annotation_class=typing.get_args(annotation),
             concrete_embedded_classes=typing_inspect.get_args(annotation),
             embedded_config=None,
         )
     elif typing_inspect.is_generic_type(annotation):
-        print("generic", field_name, annotation)
+        # print("generic", field_name, annotation)
+        pass
     else:
-        print("literal", field_name, annotation)
+        # print("literal", field_name, annotation)
+        pass
 
 
 def setup_build_model_definition(model: type["AbstractBaseNode"]):
@@ -962,7 +962,6 @@ def setup_build_model_definition(model: type["AbstractBaseNode"]):
     for field_name, field in model.model_fields.items():
         field.rebuild_annotation()
     for field_name, field in model.model_fields.items():
-        print("----")
 
         field_config = create_field_config(
             annotation=field.annotation,

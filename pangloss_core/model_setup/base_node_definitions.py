@@ -93,7 +93,23 @@ class BaseNonHeritableTrait:
 
 
 class BaseHeritableTrait:
-    pass
+    __pg_real_types_with_trait__: set[type["AbstractBaseNode"]]
+
+    @classmethod
+    def __pg_is_subclass_of_trait__(cls):
+        """Determine whether a class is a subclass of AbstractTrait,
+        not the application of a trait to a real BaseNode class.
+
+        This should work by not having BaseNode in its class hierarchy
+        """
+        for parent in cls.mro()[1:]:
+            if issubclass(parent, AbstractBaseNode):
+                return False
+        else:
+            return True
+
+    def __init_subclass__(cls):
+        cls.__pg_real_types_with_trait__ = set()
 
 
 class AbstractBaseNode(BaseNodeStandardFields):

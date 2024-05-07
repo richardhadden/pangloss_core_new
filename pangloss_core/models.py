@@ -20,10 +20,13 @@ from pangloss_core.exceptions import PanglossNotFoundError, PanglossCreateError
 from pangloss_core.model_setup.relation_to import (
     RelationTo,
     ReifiedRelation,
-    ReifiedTargetConfig,
 )
 from pangloss_core.model_setup.embedded import Embedded
-from pangloss_core.model_setup.config_definitions import EmbeddedConfig, RelationConfig
+from pangloss_core.model_setup.config_definitions import (
+    EmbeddedConfig,
+    RelationConfig,
+    ReifiedTargetConfig,
+)
 from pangloss_core.model_setup.relation_properties_model import RelationPropertiesModel
 
 

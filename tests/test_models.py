@@ -9,6 +9,7 @@ import pytest
 from pangloss_core.exceptions import PanglossConfigError
 
 from pangloss_core.model_setup.base_node_definitions import (
+    AbstractBaseNode,
     BaseNonHeritableTrait,
     BaseHeritableTrait,
     EditNodeBase,
@@ -18,6 +19,7 @@ from pangloss_core.model_setup.config_definitions import (
     EmbeddedConfig,
     RelationConfig,
     RelationDefinition,
+    ReifiedTargetConfig,
 )
 from pangloss_core.model_setup.reference_node_base import BaseNodeReference
 from pangloss_core.model_setup.relation_properties_model import (
@@ -32,7 +34,6 @@ from pangloss_core.model_setup.model_manager import ModelManager
 from pangloss_core.model_setup.relation_to import (
     RelationTo,
     ReifiedRelation,
-    ReifiedTargetConfig,
 )
 from pangloss_core.models import BaseNode
 
@@ -41,7 +42,10 @@ from pangloss_core.model_setup.setup_procedures import (
     setup_build_model_definition,
 )
 
-from pangloss_core.model_setup.setup_utils import _get_concrete_node_classes
+from pangloss_core.model_setup.setup_utils import (
+    _get_all_subclasses,
+    _get_concrete_node_classes,
+)
 
 from pangloss_core.model_setup.config_definitions import EmbeddedNodeDefinition
 
@@ -1820,7 +1824,7 @@ def test_create_model_config():
         pass
 
     class Certainty(RelationPropertiesModel):
-        certainty: typing.Annotated[int, annotated_types.Gt(0), annotated_types.Le(0)]
+        certainty: typing.Annotated[int, annotated_types.Gt(0), annotated_types.Le(1)]
 
     class Identification[T](ReifiedRelation[T]):
         target: typing.Annotated[
@@ -1856,10 +1860,17 @@ def test_create_model_config():
             RelationConfig(reverse_name="is_person_in_simple"),
         ]
 
-        combo_annotated: (
-            typing.Annotated[Carrot, RelationConfig(reverse_name="is_carrot_of")]
-            | typing.Annotated[Person, RelationConfig(reverse_name="is_person_of")]
-        )
+        rel_to_multiple: typing.Annotated[
+            Person | Plant, RelationConfig(reverse_name="is_rel_to_multiple")
+        ]
+
+        rel_to_nonheritable_trait: typing.Annotated[
+            Inedible | Carrot, RelationConfig(reverse_name="is_of_nonheritable_trait")
+        ]
+
+        rel_to_heritable_trait: typing.Annotated[
+            Edible, RelationConfig(reverse_name="is_of_heritable_trait")
+        ]
 
     ModelManager.initialise_models(depth=3)  # No need to init
 
@@ -1874,12 +1885,43 @@ def test_create_model_config():
     ]
     assert rel_to_person_simple_definition
     assert isinstance(rel_to_person_simple_definition, RelationDefinition)
-    assert rel_to_person_simple_definition.annotation_class == (Person)
+    assert rel_to_person_simple_definition.annotation_class == Person
     assert rel_to_person_simple_definition.target_base_classes == {
         Person,
         SpecialPerson,
     }
     assert rel_to_person_simple_definition.reverse_name == "is_person_in_simple"
+
+    rel_to_multiple_definition = Statement.field_definitions["rel_to_multiple"]
+    assert rel_to_multiple_definition
+    assert isinstance(rel_to_multiple_definition, RelationDefinition)
+    assert rel_to_multiple_definition.annotation_class == Person | Plant
+    assert rel_to_multiple_definition.target_base_classes == {
+        Person,
+        Plant,
+        SpecialPerson,
+        Carrot,
+        PurpleCarrot,
+    }
+    assert rel_to_multiple_definition.reverse_name == "is_rel_to_multiple"
+
+    rel_to_nonheritable_trait_definition = Statement.field_definitions[
+        "rel_to_nonheritable_trait"
+    ]
+    assert rel_to_nonheritable_trait_definition
+    assert isinstance(rel_to_nonheritable_trait_definition, RelationDefinition)
+    assert rel_to_nonheritable_trait_definition.annotation_class == Inedible | Carrot
+    assert rel_to_nonheritable_trait_definition.target_base_classes == {
+        Plant,
+        Person,
+        Carrot,
+        PurpleCarrot,
+    }
+
+    rel_to_heritable_trait_definition = Statement.field_definitions[
+        "rel_to_heritable_trait"
+    ]
+    assert rel_to_heritable_trait_definition
 
 
 def test_embedded_cannot_take_non_node_type():
