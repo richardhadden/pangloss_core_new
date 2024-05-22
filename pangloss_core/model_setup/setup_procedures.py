@@ -30,6 +30,7 @@ from pangloss_core.model_setup.config_definitions import (
     _RelationConfigInstantiated,
     _OutgoingRelationDefinition,
     _OutgoingReifiedRelationDefinition,
+    PropertyDefinition,
     RelationConfig,
     RelationDefinition,
     ReifiedTargetConfig,
@@ -878,11 +879,6 @@ def _get_parent_class(model: type[AbstractBaseNode]):
     return model.__bases__[0]
 
 
-@dataclasses.dataclass
-class ParsedFieldType:
-    pass
-
-
 class Union(list):
     def __repr__(self):
         return f"Union({super().__repr__()[1:][:-1]})"
@@ -924,16 +920,17 @@ def __setup_parse_types(ann):
 
 
 from pangloss_core.model_setup.config_definitions import (
-    PropertyFieldDefinition,
+    PropertyDefinition,
     EmbeddedNodeDefinition,
     ModelFieldsDefinitions,
+    LiteralFieldDefinition,
 )
 
 
 def create_field_config(annotation, metadata, model, field_name: str):
     # print(field_name, annotation, metadata)
     if typing_inspect.is_literal_type(annotation):
-        return PropertyFieldDefinition(typing_inspect.get_args(annotation)[0])
+        return LiteralFieldDefinition(typing_inspect.get_args(annotation)[0])
 
     elif typing.get_origin(annotation) is typing.Annotated:
         # print("is annotated", field_name)
@@ -953,8 +950,12 @@ def create_field_config(annotation, metadata, model, field_name: str):
         # print("generic", field_name, annotation)
         pass
     else:
-        # print("literal", field_name, annotation)
-        pass
+        print("literal", field_name, annotation)
+        return PropertyDefinition(
+            pangloss_field_type="Property",
+            annotation_class=annotation,
+            validators=metadata,
+        )
 
 
 def setup_build_model_definition(model: type["AbstractBaseNode"]):

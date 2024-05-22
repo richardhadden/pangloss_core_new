@@ -14,6 +14,101 @@ Pangloss-Core
 <br>
 <hr>
 
+# Rewrite
+
+This section details the rewrite of the core models, semantics, etc. Where it differs from the version below, this part is right.
+
+- `RelationTo` is no longer required. Instead, annotate a BaseModel subclass, or Trait class, or reified relation class (or union), i.e.
+
+```python
+class Pet(BaseNode):
+    pass
+
+class Tiger(Pet):
+    pass
+
+class Person(BaseNode):
+    owns_pet: Annotated[Pet, RelationConfig(reverse_name="belongs_to")]
+```
+
+A relation to a BaseNode class links to all its subclasses (`Person.owns_pet` can also take a Tiger as it is a subclass of Pet)
+
+```python
+class Pet(BaseNode):
+    pass
+
+class Tiger(Pet):
+    pass
+
+class PreciousMingVase(BaseNode):
+    pass
+
+class Person(BaseNode):
+    owns_thing: Annotated[Pet | PreciousMingVase, RelationConfig(reverse_name="belongs_to")]
+```
+
+A relation to a Union type of BaseNode classes links to all options and their its subclasses (`Person.owns_thing` can take Pet, Tiger and PreciousMingVase)
+
+
+#### Traits
+
+```python
+class Ownable(BaseHeritableTrait):
+    pass
+
+class Pet(BaseNode, Ownable):
+    pass
+
+class Tiger(Pet): 
+    pass
+
+class PreciousMingVase(BaseNode, Ownable):
+    pass
+
+class Person(BaseNode):
+    owns_thing: Annotated[Ownable, RelationConfig(reverse_name="belongs_to")]
+```
+
+Linking to a HeritableTrait links to all classes that include that trait, and all subclasses (i.e. Tiger is Ownable, as it is a subclass of Pet, which is Ownable)
+
+```python
+class Ownable(BaseNonHeritableTrait): # <-- note the NonHeritableTrait!
+    pass
+
+class Pet(BaseNode, Ownable):
+    pass
+
+class Tiger(Pet):
+    pass
+
+class PreciousMingVase(BaseNode, Ownable):
+    pass
+
+class Person(BaseNode):
+    owns_thing: Annotated[Ownable, RelationConfig(reverse_name="belongs_to")]
+```
+Linking to a NonHeritableTrait links to all classes that directly include that trait, but not their subclasses  (i.e. Tiger is NOT Ownable, even though it is a subclass of Pet, which is Ownable)
+
+
+```python
+class Ownable(NonHeritableTrait):
+    pass
+
+class Pet(BaseNode, Ownable):
+    pass
+
+class Tiger(Pet):
+    pass
+
+class PreciousMingVase(BaseNode, Ownable):
+    pass
+
+class Person(BaseNode):
+    owns_thing: Annotated[Ownable, RelationConfig(reverse_name="belongs_to")]
+```
+
+
+
 ### A Graph Database, data modelling and API system using neo4j, Pydantic and FastAPI
 <br>
 

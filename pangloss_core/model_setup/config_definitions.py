@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import inspect
 import types
 import typing
@@ -339,31 +340,32 @@ class LiteralFieldDefinition(FieldDefinition):
     pangloss_field_type: typing.Literal["Literal"]
 
 
+# Property types from Neo4j:
+# BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST, LOCAL DATETIME, LOCAL TIME, POINT, STRING, ZONED DATETIME, and ZONED TIME
+type MappedCypherTypes = bool | datetime.date | datetime.timedelta | float | int | datetime.datetime | str
+type ListMappedCypherTypes[T: MappedCypherTypes] = list[T]
+
+
 @dataclasses.dataclass
-class PropertyFieldDefinition(FieldDefinition):
-    pangloss_field_type: typing.Literal["Value"]
+class PropertyDefinition(FieldDefinition):
+
+    annotation_class: type[MappedCypherTypes]
+    validators: typing.Optional[typing.Sequence[annotated_types.BaseMetadata]] = None
+    pangloss_field_type: typing.Literal["Property"] = dataclasses.field(
+        default="Property"
+    )
 
 
-class OutgoingRelationDefinition(FieldDefinition):
-    """Class containing the definition of an outgoing node:
+@dataclasses.dataclass
+class PropertyListDefinition(FieldDefinition):
+    annotation_class: type[MappedCypherTypes]
+    validators: typing.Optional[typing.Sequence[annotated_types.BaseMetadata]] = None
+    pangloss_field_type: typing.Literal["EmbeddedNode"] = dataclasses.field(
+        default="EmbeddedNode"
+    )
 
-    - `target_base_class: type[BaseNode]`: the target ("to") class of the relationship
-    - `target_reference_class: type[BaseNodeReference]`: the reference class of the target class
-    - `relation_config: _PG_RelationshipConfigInstantiated`: the configuration model for the relationship
-    - `origin_base_class: type[BaseNode]`: the origin ("from") class of the relationship
-    """
-
-    target_base_class: type["AbstractBaseNode"]
-    target_reference_class: type["BaseNodeReference"]
-    relation_config: _RelationConfigInstantiated
-    origin_base_class: type["AbstractBaseNode"]
-
-    def __hash__(self):
-        return hash(
-            repr(self.origin_base_class)
-            + repr(self.target_base_class)
-            + repr(self.relation_config)
-        )
+    def __post_init__(self):
+        pass
 
 
 @dataclasses.dataclass

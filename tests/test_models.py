@@ -17,6 +17,7 @@ from pangloss_core.model_setup.base_node_definitions import (
 )
 from pangloss_core.model_setup.config_definitions import (
     EmbeddedConfig,
+    PropertyDefinition,
     RelationConfig,
     RelationDefinition,
     ReifiedTargetConfig,
@@ -1922,6 +1923,17 @@ def test_create_model_config():
         "rel_to_heritable_trait"
     ]
     assert rel_to_heritable_trait_definition
+    assert isinstance(rel_to_heritable_trait_definition, RelationDefinition)
+    assert rel_to_heritable_trait_definition.annotation_class == Edible
+    assert rel_to_heritable_trait_definition.target_base_classes == {
+        Carrot,
+        PurpleCarrot,
+    }
+
+    number_field_definition = Statement.field_definitions["number_field"]
+    assert number_field_definition
+    assert isinstance(number_field_definition, PropertyDefinition)
+    assert number_field_definition.annotation_class == int
 
 
 def test_embedded_cannot_take_non_node_type():
